@@ -5,8 +5,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import it.polito.tdp.nyc.model.Hotspot;
+import it.polito.tdp.nyc.model.NTA;
 
 public class NYCDao {
 	
@@ -36,5 +40,55 @@ public class NYCDao {
 		return result;
 	}
 	
-	
+	public List<String> getAllBorought() {
+		String sql = "SELECT DISTINCT n.Borough "
+				   + "FROM nyc_wifi_hotspot_locations n ";
+		List<String> result = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet res = st.executeQuery();
+
+			while (res.next()) {
+				result.add(res.getString("Borough"));   }
+
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");  }
+
+		return result;
+	}
+
+	public List<NTA> getNTA(String borough) {
+		String sql = "SELECT DISTINCT NTAcode, SSID "
+				+ "FROM nyc_wifi_hotspot_locations "
+				+ "WHERE Borough =? "
+				+ "ORDER BY NTAcode ";
+		List<NTA> result = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, borough);
+			ResultSet res = st.executeQuery();
+
+			String lastNTACode = "";
+			while (res.next()) {
+				if(!res.getString("NTAcode").equals(lastNTACode) ) {
+					Set<String> ssdis = new HashSet<>();
+					ssdis.add(res.getString("SSID"));
+					result.add(new NTA(res.getString("NTAcode"), ssdis)); 
+					lastNTACode = res.getString("NTAcode"); 
+		   	} else { 
+		   			result.get(result.size()-1).getSSID().add(res.getString("SSID"));   }
+					}
+
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");  }
+
+		return result;
+	}
+		
 }
